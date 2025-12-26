@@ -10,6 +10,15 @@ const config = {
       out: "build",
       precompress: true,
     }),
+    experimental: {
+      remoteFunctions: true,
+    },
+  },
+
+  compilerOptions: {
+    experimental: {
+      async: true,
+    },
   },
 };
 

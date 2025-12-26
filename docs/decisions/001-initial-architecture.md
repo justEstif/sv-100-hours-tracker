@@ -10,16 +10,19 @@ Building a tracker for long-term skill commitments (100 hours per pursuit). Need
 ## Decision
 
 **Stack:**
+
 - SvelteKit web app with SQLite storage
 - Deployed on Dokku via git-push
 - LLM API (Claude) for on-demand reflection analysis
 
 **Data model:**
+
 - Commitments: title, category, goal hours
 - Time Logs: commitment_id, duration, date, reflection text
 - Milestones: commitment_id, hours_threshold, user_synthesis, ai_feedback
 
 **MVP scope:**
+
 1. Add/edit commitments (max 4 active)
 2. Log time with required reflection
 3. Progress dashboard (hours logged, recent reflections)
