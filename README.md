@@ -1,38 +1,26 @@
-# sv
+# 100 Hours Tracker
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+Track long-term skill commitments with reflections and milestone synthesis.
 
-## Creating a project
+## Problem
 
-If you're seeing this, you've probably already done this step. Congrats!
+It's easy to sample many interests shallowly but hard to develop genuine depth. Most productivity tools optimize for task completion or streaks, not sustained engagement over months.
 
-```sh
-# create a new project in the current directory
-npx sv create
+## Solution
 
-# create a new project in my-app
-npx sv create my-app
-```
+A focused tracker for 3-4 annual "deep dives." Log time, write reflections, and synthesize your learning at milestones (25/50/75/100 hours). Optional AI analysis surfaces patterns you might have missed.
 
-## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+## Quick Start
 
 ```sh
-npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
+bun install
+bun run dev
 ```
 
-## Building
+## Configuration
 
-To create a production version of your app:
+Copy `.env.example` to `.env` and set your values.
 
-```sh
-npm run build
-```
+## Documentation
 
-You can preview the production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+- [Decisions](docs/decisions/) - Architecture and design choices
