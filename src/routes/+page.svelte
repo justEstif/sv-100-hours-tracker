@@ -1,103 +1,155 @@
 <script lang="ts">
-  import { logout } from "$lib/auth.remote";
+	import { fly, fade } from 'svelte/transition';
+	import { cubicOut } from 'svelte/easing';
+	import Navbar from '$lib/components/Navbar.svelte';
+	import { createCommitment, getCommitments } from '$lib/log.remote';
 
-  let { data } = $props();
+	let { data } = $props();
 
-  // Close dropdown when clicking outside
-  function handleClickOutside(event: MouseEvent) {
-    const details = document.querySelector("details[open]");
-    if (details && !details.contains(event.target as Node)) {
-      details.removeAttribute("open");
-    }
-  }
+	// Fetch commitments list
+	let commitments = $derived(await getCommitments());
+
+	// Format minutes to hours:minutes display
+	function formatDuration(minutes: number): string {
+		const hours = Math.floor(minutes / 60);
+		const mins = minutes % 60;
+		if (hours === 0) return `${mins}m`;
+		if (mins === 0) return `${hours}h`;
+		return `${hours}h ${mins}m`;
+	}
 </script>
 
-<svelte:document onclick={handleClickOutside} />
+<div class="min-h-screen bg-base-200">
+	<Navbar user={data.user} />
 
-<div class="min-h-screen bg-slate-50">
-  <nav class="bg-white border-b border-slate-200">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="flex justify-between h-16 items-center">
-        <!-- Brand -->
-        <a href="/" class="text-xl font-bold text-indigo-600">100 Hours</a>
+	<main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+		{#if data.user}
+			<!-- Signed in: Show commitments list and create form -->
+			<div in:fade={{ duration: 300 }}>
+				<div class="mb-8">
+					<h1 class="text-3xl font-display font-bold">Welcome back, {data.user.username}!</h1>
+					<p class="mt-2 text-neutral">Ready to log some hours?</p>
+				</div>
 
-        <!-- Nav Links + Auth -->
-        <div class="flex items-center space-x-4">
-          <a
-            href="/log"
-            class="text-slate-600 hover:text-slate-900 px-3 py-2 rounded-md text-sm font-medium"
-          >
-            Log Hours
-          </a>
-          <a
-            href="/history"
-            class="text-slate-600 hover:text-slate-900 px-3 py-2 rounded-md text-sm font-medium"
-          >
-            History
-          </a>
+				{#if commitments.length > 0}
+					<!-- Commitment selector -->
+					<section class="mb-8">
+						<h2 class="text-xl font-display font-semibold mb-4">Your Commitments</h2>
+						<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+							{#each commitments as commitment, i (commitment.id)}
+								{@const progressPercent = Math.min(
+									100,
+									Math.round((commitment.totalMinutes / 60 / commitment.goalHours) * 100)
+								)}
+								<a
+									href="/{commitment.id}"
+									class="card bg-base-100 hover:-translate-y-1 hover:shadow-soft-lg transition-all duration-200"
+									in:fly={{ y: 20, duration: 400, delay: i * 80, easing: cubicOut }}
+								>
+									<div class="card-body">
+										<div class="flex justify-between items-start gap-3">
+											<div class="flex-1 min-w-0">
+												<h3 class="card-title font-display">{commitment.title}</h3>
+												{#if commitment.category}
+													<p class="text-sm text-neutral">{commitment.category}</p>
+												{/if}
+											</div>
+											<div
+												class="radial-progress text-primary text-xs font-medium shrink-0"
+												style="--value:{progressPercent}; --size:3.5rem; --thickness:4px;"
+												role="progressbar"
+												aria-valuenow={progressPercent}
+											>
+												{formatDuration(commitment.totalMinutes)}
+											</div>
+										</div>
+										<div class="card-actions justify-end mt-2">
+											<span class="btn btn-primary btn-sm">Log Time</span>
+										</div>
+									</div>
+								</a>
+							{/each}
+						</div>
+					</section>
 
-          {#if data?.user}
-            <details class="relative">
-              <summary
-                class="cursor-pointer list-none flex items-center text-slate-700 hover:text-slate-900 px-3 py-2 rounded-md text-sm font-medium"
-              >
-                {data.user.username} &#9662;
-              </summary>
-              <div
-                class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-10"
-              >
-                <a
-                  href="/settings"
-                  class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
-                >
-                  Settings
-                </a>
-                <form {...logout}>
-                  <button
-                    class="block w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
-                  >
-                    Logout
-                  </button>
-                </form>
-              </div>
-            </details>
-          {:else}
-            <a
-              href="/auth"
-              class="px-4 py-2 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 text-sm"
-            >
-              Sign In
-            </a>
-          {/if}
-        </div>
-      </div>
-    </div>
-  </nav>
+					<div class="divider text-neutral">OR</div>
+				{/if}
 
-  <main>
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {#if data.user}
-        <h1 class="text-3xl font-bold text-slate-900">
-          Welcome back, {data.user.username}!
-        </h1>
-        <p class="mt-2 text-slate-600">Ready to log some hours?</p>
-      {:else}
-        <div class="text-center py-16">
-          <h1 class="text-4xl font-bold text-slate-900">
-            Track Your 100 Hours
-          </h1>
-          <p class="mt-4 text-lg text-slate-600 max-w-2xl mx-auto">
-            Build expertise through deliberate practice. Track your progress
-            toward mastery with our simple hour logging system.
-          </p>
-          <a
-            href="/auth"
-            class="mt-8 inline-block px-6 py-3 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors"
-          >
-            Get Started
-          </a>
-        </div>
-      {/if}
-    </div>
-  </main>
+				<!-- Create commitment form -->
+				<section>
+					<h2 class="text-xl font-display font-semibold mb-4">
+						{commitments.length > 0 ? 'Create New Commitment' : 'Create Your First Commitment'}
+					</h2>
+					<div
+						class="card bg-base-100"
+						in:fly={{
+							y: 20,
+							duration: 400,
+							delay: commitments.length * 80,
+							easing: cubicOut
+						}}
+					>
+						<div class="card-body">
+							<form {...createCommitment} class="space-y-4">
+								<!-- Title -->
+								<fieldset class="fieldset">
+									<legend class="fieldset-legend">What do you want to master?</legend>
+									<input
+										{...createCommitment.fields.title.as('text')}
+										class="input w-full"
+										class:input-error={(createCommitment.fields.title.issues()?.length ?? 0) > 0}
+										placeholder="e.g., Guitar, Spanish, Cooking..."
+									/>
+									{#each createCommitment.fields.title.issues() ?? [] as issue}
+										<p class="fieldset-label text-error">{issue.message}</p>
+									{/each}
+								</fieldset>
+
+								<!-- Category (optional) -->
+								<fieldset class="fieldset">
+									<legend class="fieldset-legend">Category (optional)</legend>
+									<input
+										{...createCommitment.fields.category.as('text')}
+										class="input w-full"
+										class:input-error={(createCommitment.fields.category.issues()?.length ?? 0) > 0}
+										placeholder="e.g., Music, Language, Fitness..."
+									/>
+									{#each createCommitment.fields.category.issues() ?? [] as issue}
+										<p class="fieldset-label text-error">{issue.message}</p>
+									{/each}
+								</fieldset>
+
+								<!-- Submit -->
+								<button type="submit" disabled={!!createCommitment.pending} class="btn btn-primary">
+									{#if createCommitment.pending}
+										<span class="loading loading-spinner loading-sm"></span>
+										Creating...
+									{:else}
+										Create & Start Logging
+									{/if}
+								</button>
+
+								<!-- Form-level errors -->
+								{#each createCommitment.fields.allIssues() as issue}
+									<div class="alert alert-error mt-4">
+										<span>{issue.message}</span>
+									</div>
+								{/each}
+							</form>
+						</div>
+					</div>
+				</section>
+			</div>
+		{:else}
+			<!-- Signed out: Show landing page -->
+			<div class="text-center py-16">
+				<h1 class="text-4xl font-display font-bold mb-4">Track Your 100 Hours</h1>
+				<p class="text-lg text-neutral max-w-2xl mx-auto mb-8">
+					Build expertise through deliberate practice. Track your progress toward mastery with our
+					simple hour logging system.
+				</p>
+				<a href="/auth" class="btn btn-primary btn-lg">Get Started</a>
+			</div>
+		{/if}
+	</main>
 </div>
