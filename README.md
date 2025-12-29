@@ -21,6 +21,13 @@ bun run dev
 
 Copy `.env.example` to `.env` and set your values.
 
+### Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `DATABASE_URL` | Yes | SQLite database path (e.g., `file:./local.db`) |
+| `GOOGLE_GENERATIVE_AI_API_KEY` | No | Google AI API key for AI-powered milestone feedback. Get one at [Google AI Studio](https://aistudio.google.com/apikey). If not set, milestones will be created without AI feedback. |
+
 ## Documentation
 
 - [Decisions](docs/decisions/) - Architecture and design choices

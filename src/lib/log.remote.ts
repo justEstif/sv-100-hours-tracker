@@ -10,6 +10,7 @@ import {
   UpdateMilestoneSchema,
   UpdateTimeLogSchema,
 } from "$lib/schemas/log";
+import { generateMilestoneFeedback } from "$lib/server/ai";
 import { db } from "$lib/server/db";
 import * as table from "$lib/server/db/schema";
 import { invalid, redirect } from "@sveltejs/kit";
@@ -130,11 +131,42 @@ export const createMilestone = form(
     }
 
     // Insert the milestone
-    await db.insert(table.milestone).values({
-      commitmentId,
-      hoursThreshold,
-      userSynthesis,
-    });
+    const [newMilestone] = await db
+      .insert(table.milestone)
+      .values({
+        commitmentId,
+        hoursThreshold,
+        userSynthesis,
+      })
+      .returning({ id: table.milestone.id });
+
+    // Fetch recent reflections for AI context
+    const recentLogs = await db
+      .select({ reflection: table.timeLog.reflection })
+      .from(table.timeLog)
+      .where(eq(table.timeLog.commitmentId, commitmentId))
+      .orderBy(desc(table.timeLog.date))
+      .limit(10);
+
+    // Generate AI feedback (gracefully handle errors)
+    try {
+      const feedback = await generateMilestoneFeedback({
+        commitmentTitle: commitment.title,
+        category: commitment.category,
+        goalHours: commitment.goalHours,
+        hoursThreshold,
+        userSynthesis,
+        recentReflections: recentLogs.map((l) => l.reflection),
+      });
+
+      await db
+        .update(table.milestone)
+        .set({ aiFeedback: feedback })
+        .where(eq(table.milestone.id, newMilestone.id));
+    } catch (error) {
+      console.error("Failed to generate AI feedback:", error);
+      // Continue without feedback - milestone is still created
+    }
 
     redirect(302, `/${commitmentId}`);
   },
@@ -550,5 +582,70 @@ export const updateMilestone = form(
       .where(eq(table.milestone.id, id));
 
     redirect(302, `/${milestone.commitmentId}`);
+  },
+);
+
+/**
+ * Regenerate AI feedback for a milestone
+ * Validates ownership via commitment, generates new feedback
+ */
+export const regenerateMilestoneFeedback = form(
+  v.object({ id: v.pipe(v.string(), v.minLength(1, "Milestone ID is required")) }),
+  async ({ id }) => {
+    const { locals } = getRequestEvent();
+
+    if (!locals.user) {
+      invalid("You must be signed in to regenerate feedback");
+    }
+
+    // Fetch milestone with commitment to verify ownership
+    const [milestone] = await db
+      .select({
+        id: table.milestone.id,
+        commitmentId: table.milestone.commitmentId,
+        hoursThreshold: table.milestone.hoursThreshold,
+        userSynthesis: table.milestone.userSynthesis,
+        commitment: {
+          title: table.commitment.title,
+          category: table.commitment.category,
+          goalHours: table.commitment.goalHours,
+          userId: table.commitment.userId,
+        },
+      })
+      .from(table.milestone)
+      .innerJoin(
+        table.commitment,
+        eq(table.milestone.commitmentId, table.commitment.id),
+      )
+      .where(eq(table.milestone.id, id));
+
+    if (!milestone || milestone.commitment.userId !== locals.user.id) {
+      invalid("Milestone not found");
+    }
+
+    // Fetch recent reflections for AI context
+    const recentLogs = await db
+      .select({ reflection: table.timeLog.reflection })
+      .from(table.timeLog)
+      .where(eq(table.timeLog.commitmentId, milestone.commitmentId))
+      .orderBy(desc(table.timeLog.date))
+      .limit(10);
+
+    // Generate new AI feedback
+    const feedback = await generateMilestoneFeedback({
+      commitmentTitle: milestone.commitment.title,
+      category: milestone.commitment.category,
+      goalHours: milestone.commitment.goalHours,
+      hoursThreshold: milestone.hoursThreshold,
+      userSynthesis: milestone.userSynthesis,
+      recentReflections: recentLogs.map((l) => l.reflection),
+    });
+
+    await db
+      .update(table.milestone)
+      .set({ aiFeedback: feedback })
+      .where(eq(table.milestone.id, id));
+
+    redirect(302, `/${milestone.commitmentId}/milestone/${id}/edit`);
   },
 );

@@ -38,6 +38,8 @@
     "vite-plugin-devtools-json": "^1.0.0"
   },
   "dependencies": {
+    "@ai-sdk/google": "^3.0.1",
+    "ai": "^6.0.3",
     "valibot": "^1.2.0"
   }
 }

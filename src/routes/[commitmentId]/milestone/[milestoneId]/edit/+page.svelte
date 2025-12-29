@@ -3,7 +3,11 @@
   import { cubicOut } from "svelte/easing";
   import { page } from "$app/state";
   import Navbar from "$lib/components/Navbar.svelte";
-  import { getMilestone, updateMilestone } from "$lib/log.remote";
+  import {
+    getMilestone,
+    updateMilestone,
+    regenerateMilestoneFeedback,
+  } from "$lib/log.remote";
 
   let { data } = $props();
 
@@ -114,21 +118,12 @@
                     ?.length ?? 0) > 0}
                   rows="8"
                   placeholder="What have you learned? What surprised you? What do you want to focus on next?"
-                >{milestoneData.userSynthesis}</textarea>
+                  >{milestoneData.userSynthesis}</textarea
+                >
                 {#each updateMilestone.fields.userSynthesis.issues() ?? [] as issue}
                   <p class="fieldset-label text-error">{issue.message}</p>
                 {/each}
               </fieldset>
-
-              <!-- AI Feedback (display only if present) -->
-              {#if milestoneData.aiFeedback}
-                <fieldset class="fieldset">
-                  <legend class="fieldset-legend">AI Feedback</legend>
-                  <div class="p-4 bg-base-200 rounded-lg text-neutral">
-                    {milestoneData.aiFeedback}
-                  </div>
-                </fieldset>
-              {/if}
 
               <!-- Buttons -->
               <div class="flex gap-2">
@@ -156,6 +151,104 @@
                 </div>
               {/each}
             </form>
+          </div>
+        </div>
+
+        <!-- AI Feedback (separate card to avoid nested forms) -->
+        <div
+          class="card bg-base-100 mt-6"
+          in:fly={{ y: 20, duration: 400, delay: 200, easing: cubicOut }}
+        >
+          <div class="card-body">
+            <h3 class="text-lg font-display font-semibold mb-3">AI Feedback</h3>
+            {#if milestoneData.aiFeedback}
+              <div
+                class="p-4 bg-secondary/10 rounded-lg border border-secondary/20"
+              >
+                <div class="flex items-start gap-2">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="h-4 w-4 text-secondary mt-0.5 shrink-0"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+                    />
+                  </svg>
+                  <p class="text-sm text-neutral italic">
+                    {milestoneData.aiFeedback}
+                  </p>
+                </div>
+              </div>
+              <form {...regenerateMilestoneFeedback} class="mt-3">
+                <input type="hidden" name="id" value={milestoneData.id} />
+                <button
+                  type="submit"
+                  class="btn btn-ghost btn-sm gap-2"
+                  disabled={!!regenerateMilestoneFeedback.pending}
+                >
+                  {#if regenerateMilestoneFeedback.pending}
+                    <span class="loading loading-spinner loading-xs"></span>
+                    Regenerating...
+                  {:else}
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      class="h-4 w-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                      />
+                    </svg>
+                    Regenerate Feedback
+                  {/if}
+                </button>
+              </form>
+            {:else}
+              <p class="text-neutral text-sm mb-3">
+                No AI feedback yet. Generate personalized insights based on your
+                synthesis and learning reflections.
+              </p>
+              <form {...regenerateMilestoneFeedback}>
+                <input type="hidden" name="id" value={milestoneData.id} />
+                <button
+                  type="submit"
+                  class="btn btn-secondary btn-sm gap-2"
+                  disabled={!!regenerateMilestoneFeedback.pending}
+                >
+                  {#if regenerateMilestoneFeedback.pending}
+                    <span class="loading loading-spinner loading-xs"></span>
+                    Generating...
+                  {:else}
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      class="h-4 w-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+                      />
+                    </svg>
+                    Generate AI Feedback
+                  {/if}
+                </button>
+              </form>
+            {/if}
           </div>
         </div>
       </div>

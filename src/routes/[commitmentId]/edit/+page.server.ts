@@ -6,5 +6,6 @@ export const load: PageServerLoad = async ({ locals }) => {
     redirect(302, "/auth");
   }
 
+  // i don't think this is required
   return { user: locals.user };
 };
