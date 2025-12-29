@@ -64,7 +64,8 @@ export type MilestoneThreshold = (typeof MILESTONE_THRESHOLDS)[number];
 export const MilestoneFormSchema = v.object({
   commitmentId: v.pipe(v.string(), v.minLength(1, "Commitment is required")),
   hoursThreshold: v.pipe(
-    v.number(),
+    v.union([v.string(), v.number()]),
+    v.transform((val) => (typeof val === "string" ? parseInt(val, 10) : val)),
     v.check(
       (n): n is MilestoneThreshold =>
         MILESTONE_THRESHOLDS.includes(n as MilestoneThreshold),

@@ -30,7 +30,7 @@ bun run prepare
 
 ### Environment Variables
 
-Required: `DATABASE_URL` - SQLite database URL (e.g., `file:./dev.db`)
+Required: `DATABASE_URL` - SQLite database URL (e.g., `file:./local.db`)
 
 ## Project Structure
 
