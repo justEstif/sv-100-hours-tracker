@@ -2,22 +2,21 @@ import { form, getRequestEvent, query } from "$app/server";
 import { CommitmentFormSchema, TimeLogFormSchema } from "$lib/schemas/log";
 import { db } from "$lib/server/db";
 import * as table from "$lib/server/db/schema";
-import { error, redirect } from "@sveltejs/kit";
+import { error, invalid, redirect } from "@sveltejs/kit";
 import { and, desc, eq, sql } from "drizzle-orm";
 import * as v from "valibot";
 
-// TODO: Remote function should make use of: https://svelte.dev/docs/kit/remote-functions#form-Programmatic-validation
 /**
  * Create a new time log entry
  * Validates commitment ownership, calculates duration, inserts log
  */
 export const createTimeLog = form(
   TimeLogFormSchema,
-  async ({ commitmentId, hours, minutes, date, reflection }) => {
+  async ({ commitmentId, hours, minutes, date, reflection }, issue) => {
     const { locals } = getRequestEvent();
 
     if (!locals.user) {
-      error(401, "Not authenticated");
+      invalid("You must be signed in to log time");
     }
 
     // Verify commitment belongs to user
@@ -32,7 +31,7 @@ export const createTimeLog = form(
       );
 
     if (!commitment) {
-      error(404, "Commitment not found");
+      invalid("Commitment not found");
     }
 
     // Calculate total duration in minutes
@@ -46,7 +45,6 @@ export const createTimeLog = form(
       reflection,
     });
 
-    // Redirect to same page to show the new entry
     redirect(302, `/${commitmentId}`);
   },
 );
@@ -57,11 +55,11 @@ export const createTimeLog = form(
  */
 export const createCommitment = form(
   CommitmentFormSchema,
-  async ({ title, category }) => {
+  async ({ title, category }, issue) => {
     const { locals } = getRequestEvent();
 
     if (!locals.user) {
-      error(401, "Not authenticated");
+      invalid("You must be signed in to create a commitment");
     }
 
     // Insert the commitment
@@ -74,7 +72,6 @@ export const createCommitment = form(
       })
       .returning({ id: table.commitment.id });
 
-    // Redirect to the new commitment's page
     redirect(302, `/${newCommitment.id}`);
   },
 );
@@ -89,7 +86,7 @@ export const createCommitment = form(
 export const getCommitments = query(async () => {
   const { locals } = getRequestEvent();
   if (!locals.user) {
-    redirect(302, "/auth");
+    return [];
   }
 
   const commitments = await db

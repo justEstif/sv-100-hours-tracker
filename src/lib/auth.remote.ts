@@ -1,4 +1,4 @@
-import { error, redirect } from "@sveltejs/kit";
+import { error, invalid, redirect } from "@sveltejs/kit";
 import { form } from "$app/server";
 import { getRequestEvent } from "$app/server";
 import { db } from "$lib/server/db";
@@ -11,7 +11,7 @@ import { eq } from "drizzle-orm";
  * Login form handler
  * Validates credentials, creates session, sets cookie, redirects to /
  */
-export const login = form(AuthFormSchema, async ({ username, password }) => {
+export const login = form(AuthFormSchema, async ({ username, password }, issue) => {
   const results = await db
     .select()
     .from(table.user)
@@ -19,7 +19,7 @@ export const login = form(AuthFormSchema, async ({ username, password }) => {
 
   const existingUser = results.at(0);
   if (!existingUser) {
-    error(400, "Incorrect username or password");
+    invalid(issue.username("Incorrect username or password"));
   }
 
   const validPassword = await Bun.password.verify(
@@ -27,7 +27,7 @@ export const login = form(AuthFormSchema, async ({ username, password }) => {
     existingUser.passwordHash,
   );
   if (!validPassword) {
-    error(400, "Incorrect username or password");
+    invalid(issue.username("Incorrect username or password"));
   }
 
   const { cookies } = getRequestEvent();
@@ -42,7 +42,7 @@ export const login = form(AuthFormSchema, async ({ username, password }) => {
  * Register form handler
  * Creates user, creates session, sets cookie, redirects to /
  */
-export const register = form(AuthFormSchema, async ({ username, password }) => {
+export const register = form(AuthFormSchema, async ({ username, password }, issue) => {
   const passwordHash = await Bun.password.hash(password, {
     algorithm: "argon2id",
     memoryCost: 19,
@@ -56,7 +56,7 @@ export const register = form(AuthFormSchema, async ({ username, password }) => {
       .values({ username, passwordHash })
       .returning({ id: table.user.id });
   } catch {
-    error(500, "Username already taken or an error occurred");
+    invalid(issue.username("Username already taken"));
   }
 
   const { cookies } = getRequestEvent();

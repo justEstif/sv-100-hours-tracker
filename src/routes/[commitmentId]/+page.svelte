@@ -5,9 +5,13 @@
   import Navbar from "$lib/components/Navbar.svelte";
   import { createTimeLog, getCommitmentWithLogs } from "$lib/log.remote";
 
+  let { data } = $props();
+
   // Fetch commitment data (reactive to param changes)
   let commitmentData = $derived(
-    await getCommitmentWithLogs(page.params.commitmentId!),
+    page.params.commitmentId
+      ? await getCommitmentWithLogs(page.params.commitmentId)
+      : null,
   );
 
   // Format minutes to hours:minutes display

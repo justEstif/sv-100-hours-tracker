@@ -5,5 +5,4 @@ export const load: PageServerLoad = async ({ locals }) => {
   if (!locals.user) {
     redirect(302, "/auth");
   }
-  return { user: locals.user };
 };
