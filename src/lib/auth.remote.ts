@@ -43,22 +43,25 @@ export const login = form(AuthFormSchema, async ({ username, password }) => {
  * Creates user, creates session, sets cookie, redirects to /
  */
 export const register = form(AuthFormSchema, async ({ username, password }) => {
-  const userId = Bun.randomUUIDv7();
   const passwordHash = await Bun.password.hash(password, {
     algorithm: "argon2id",
     memoryCost: 19,
     timeCost: 2,
   });
 
+  let newUser: { id: string };
   try {
-    await db.insert(table.user).values({ id: userId, username, passwordHash });
+    [newUser] = await db
+      .insert(table.user)
+      .values({ username, passwordHash })
+      .returning({ id: table.user.id });
   } catch {
     error(500, "Username already taken or an error occurred");
   }
 
   const { cookies } = getRequestEvent();
   const sessionToken = auth.generateSessionToken();
-  const session = await auth.createSession(sessionToken, userId);
+  const session = await auth.createSession(sessionToken, newUser.id);
   auth.setSessionTokenCookie(cookies, sessionToken, session.expiresAt);
 
   redirect(302, "/");
