@@ -1,3 +1,245 @@
-@import 'tailwindcss';
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Outfit:wght@300;400;500;600&display=swap');
+@import "tailwindcss";
+
 @plugin '@tailwindcss/forms';
 @plugin '@tailwindcss/typography';
+@plugin "daisyui" {
+  themes: lazylofi --default;
+}
+
+/* ============================================
+   LAZY LOFI THEME
+   A warm, cozy, playful theme inspired by 
+   lo-fi hip hop aesthetics and café vibes
+   ============================================ */
+
+@plugin "daisyui/theme" {
+  name: "lazylofi";
+  default: true;
+  color-scheme: light;
+
+  /* Base colors - warm cream backgrounds */
+  --color-base-100: oklch(98.5% 0.015 75);   /* Soft warm white - cards, surfaces */
+  --color-base-200: oklch(96.5% 0.02 70);    /* Warm cream - page background */
+  --color-base-300: oklch(91% 0.025 65);     /* Warm sand - borders, dividers */
+  --color-base-content: oklch(35% 0.03 300); /* Warm charcoal - primary text */
+
+  /* Primary - Soft coral for main actions */
+  --color-primary: oklch(68% 0.14 35);
+  --color-primary-content: oklch(98% 0.01 75);
+
+  /* Secondary - Muted sage green for completion/success */
+  --color-secondary: oklch(68% 0.12 155);
+  --color-secondary-content: oklch(98% 0.01 155);
+
+  /* Accent - Warm amber for highlights and celebrations */
+  --color-accent: oklch(82% 0.12 85);
+  --color-accent-content: oklch(30% 0.03 85);
+
+  /* Neutral - Dusty purple-gray for muted text */
+  --color-neutral: oklch(55% 0.025 300);
+  --color-neutral-content: oklch(95% 0.01 300);
+
+  /* Semantic colors */
+  --color-info: oklch(70% 0.1 220);
+  --color-info-content: oklch(98% 0.01 220);
+
+  --color-success: oklch(68% 0.12 155);      /* Same as secondary - sage green */
+  --color-success-content: oklch(98% 0.01 155);
+
+  --color-warning: oklch(80% 0.13 85);       /* Warm amber */
+  --color-warning-content: oklch(30% 0.03 85);
+
+  --color-error: oklch(62% 0.16 25);         /* Soft coral red - friendly, not harsh */
+  --color-error-content: oklch(98% 0.01 25);
+
+  /* Playful, generous border radius */
+  --radius-selector: 1rem;
+  --radius-field: 0.75rem;
+  --radius-box: 1.25rem;
+
+  /* Comfortable sizing */
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+
+  /* Subtle borders */
+  --border: 1px;
+
+  /* Effects */
+  --depth: 1;
+  --noise: 0;
+}
+
+/* ============================================
+   TYPOGRAPHY
+   Fredoka for playful headings
+   Outfit for friendly, readable body text
+   ============================================ */
+
+:root {
+  --font-display: 'Fredoka', ui-sans-serif, system-ui, sans-serif;
+  --font-body: 'Outfit', ui-sans-serif, system-ui, sans-serif;
+}
+
+html {
+  font-family: var(--font-body);
+  background-color: oklch(96.5% 0.02 70); /* base-200 for page background */
+}
+
+h1, h2, h3, h4, h5, h6,
+.font-display {
+  font-family: var(--font-display);
+}
+
+/* ============================================
+   CUSTOM UTILITIES
+   Soft, warm shadows and effects
+   ============================================ */
+
+@utility shadow-soft {
+  box-shadow: 
+    0 4px 20px -2px oklch(70% 0.03 70 / 0.15),
+    0 2px 8px -2px oklch(70% 0.03 70 / 0.1);
+}
+
+@utility shadow-soft-lg {
+  box-shadow: 
+    0 8px 30px -4px oklch(70% 0.03 70 / 0.2),
+    0 4px 12px -2px oklch(70% 0.03 70 / 0.12);
+}
+
+@utility shadow-soft-sm {
+  box-shadow: 
+    0 2px 10px -1px oklch(70% 0.03 70 / 0.12),
+    0 1px 4px -1px oklch(70% 0.03 70 / 0.08);
+}
+
+/* Glow effect for celebrations/milestones */
+@utility glow-accent {
+  box-shadow: 
+    0 0 20px 4px oklch(82% 0.12 85 / 0.3),
+    0 0 40px 8px oklch(82% 0.12 85 / 0.15);
+}
+
+@utility glow-primary {
+  box-shadow: 
+    0 0 20px 4px oklch(68% 0.14 35 / 0.3),
+    0 0 40px 8px oklch(68% 0.14 35 / 0.15);
+}
+
+@utility glow-success {
+  box-shadow: 
+    0 0 20px 4px oklch(68% 0.12 155 / 0.3),
+    0 0 40px 8px oklch(68% 0.12 155 / 0.15);
+}
+
+/* ============================================
+   ANIMATION KEYFRAMES
+   Playful, bouncy animations
+   ============================================ */
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-3deg); }
+  75% { transform: rotate(3deg); }
+}
+
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+@keyframes pop-in {
+  0% { transform: scale(0.8); opacity: 0; }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@utility animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+@utility animate-wiggle {
+  animation: wiggle 0.5s ease-in-out;
+}
+
+@utility animate-pulse-soft {
+  animation: pulse-soft 2s ease-in-out infinite;
+}
+
+@utility animate-pop-in {
+  animation: pop-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* ============================================
+   COMPONENT REFINEMENTS
+   Fine-tuning DaisyUI components for lofi feel
+   ============================================ */
+
+/* Cards get soft shadows by default */
+.card {
+  @apply shadow-soft;
+}
+
+/* Buttons get playful hover */
+.btn {
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), 
+              box-shadow 0.2s ease,
+              background-color 0.2s ease;
+}
+
+.btn:hover:not(:disabled) {
+  transform: translateY(-2px) scale(1.02);
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(0) scale(0.98);
+}
+
+/* Progress bars with smooth transitions */
+.progress::-webkit-progress-value {
+  transition: width 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.progress::-moz-progress-bar {
+  transition: width 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Input focus states */
+.input:focus,
+.textarea:focus,
+.select:focus {
+  @apply shadow-soft-sm;
+}
+
+/* ============================================
+   VIEW TRANSITIONS
+   Playful slide effect for page navigation
+   ============================================ */
+
+@keyframes slide-to-left {
+  to {
+    transform: translateX(-20px);
+    opacity: 0;
+  }
+}
+
+@keyframes slide-from-right {
+  from {
+    transform: translateX(20px);
+    opacity: 0;
+  }
+}
+
+::view-transition-old(root) {
+  animation: 150ms cubic-bezier(0.4, 0, 0.2, 1) both slide-to-left;
+}
+
+::view-transition-new(root) {
+  animation: 200ms cubic-bezier(0.4, 0, 0.2, 1) 100ms both slide-from-right;
+}
