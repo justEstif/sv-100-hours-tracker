@@ -13,7 +13,7 @@ Building a tracker for long-term skill commitments (100 hours per pursuit). Need
 
 - SvelteKit web app with SQLite storage
 - Deployed on Dokku via git-push
-- LLM API (Claude) for on-demand reflection analysis
+- LLM API (OpenCode using Gemini) for on-demand reflection analysis
 
 **Data model:**
 
