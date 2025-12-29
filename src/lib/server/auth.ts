@@ -1,4 +1,4 @@
-import type { RequestEvent } from "@sveltejs/kit";
+import type { Cookies } from "@sveltejs/kit";
 import { eq } from "drizzle-orm";
 import { db } from "$lib/server/db";
 import * as table from "$lib/server/db/schema";
@@ -9,7 +9,6 @@ export const sessionCookieName = "auth-session";
 
 export function generateSessionToken() {
   const bytes = crypto.getRandomValues(new Uint8Array(18));
-  // Convert to base64url using Buffer (available in Bun)
   const token = Buffer.from(bytes).toString("base64url");
   return token;
 }
@@ -74,18 +73,18 @@ export async function invalidateSession(sessionId: string) {
 }
 
 export function setSessionTokenCookie(
-  event: RequestEvent,
+  cookies: Cookies,
   token: string,
   expiresAt: Date,
 ) {
-  event.cookies.set(sessionCookieName, token, {
+  cookies.set(sessionCookieName, token, {
     expires: expiresAt,
     path: "/",
   });
 }
 
-export function deleteSessionTokenCookie(event: RequestEvent) {
-  event.cookies.delete(sessionCookieName, {
+export function deleteSessionTokenCookie(cookies: Cookies) {
+  cookies.delete(sessionCookieName, {
     path: "/",
   });
 }
