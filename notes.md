@@ -1,28 +1,52 @@
-I would like it to have authentication because I will be hosting it
+## Current State
 
-- I need to investigate how to host a database, specifically a libsql database
-  - can I have a testing and production one?
+Your app has a solid foundation:
 
-Then I need to start building the data model
-
-- I would also need to confirm if libsql supports rag, also curious what the AI on demand part of the MVP doc means
-
-Then build
+- Auth (login/register/logout)
+- Commitments with 100-hour goals
+- Time logging with reflections
+- Milestone system at 25/50/75/100 hours
+- History view
 
 ---
 
-Create the
+## Suggested Next Features
 
-/auth page
+### 1. **Settings Page** (Low effort)
 
-I want a centered, slightly wide worm with a checkbox that would say somethin glike "register" using the $state rune
+The navbar already links to `/settings` but it doesn't exist. Could include:
 
-it shouldn't not be accessible if the user already has signed in
-- using the page.server
+- Change password
+- Delete account
+- Theme preference (light/dark)
 
-It would have both the sign-in and register on one page, just providing different buttons for
-different things
+### 2. **Edit/Delete Operations** (Medium effort)
 
-follow the brand style
+Currently no way to:
 
-if components are created
+- Edit a time log entry (fix mistakes)
+- Delete a time log
+- Edit/archive/delete a commitment
+
+### 3. **Dashboard Analytics** (Medium effort)
+
+- Weekly/monthly charts showing time logged
+- Streak tracking (consecutive days with logs)
+- "Time until 100 hours" estimates based on pace
+
+### 4. **AI Feedback for Milestones** (Medium-High effort)
+
+Your schema has an `aiFeedback` column on milestones that's unused. Could integrate an LLM to provide personalized feedback on the user's synthesis.
+
+### 5. **Export Data** (Low effort)
+
+- Export logs to CSV/JSON for users who want their data
+
+### 6. **Reminders/Notifications** (Higher effort)
+
+- Email or browser push notifications if user hasn't logged time in X days
+
+### 7. **Social/Sharing** (Higher effort)
+
+- Public commitment pages
+- Share milestone achievements

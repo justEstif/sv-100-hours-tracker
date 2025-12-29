@@ -1,238 +1,170 @@
 # Agent Guidelines
 
-This is a SvelteKit 5 application using Bun runtime, Drizzle ORM with SQLite, TailwindCSS 4, and DaisyUI 5. It's a time tracking app for 100-hour learning commitments with a "Lazy Lofi" aesthetic.
+SvelteKit 5 app using Bun runtime, Drizzle ORM with SQLite, TailwindCSS 4, and DaisyUI 5. Time tracking for 100-hour learning commitments with a "Lazy Lofi" aesthetic.
 
-## Build/Lint/Test Commands
+## Commands
 
 ```bash
-# Development server
-bun run dev
-
-# Production build
-bun run build
-
-# Preview production build
-bun run preview
-
-# Type checking
-bun run check              # Single run
-bun run check:watch        # Watch mode
-
-# Database commands
+bun run dev                # Start dev server
+bun run build              # Production build
+bun run check              # Type check (use after changes)
+bun run check:watch        # Type check watch mode
 bun run db:generate        # Generate migration files
 bun run db:push            # Push schema to database
 bun run db:migrate         # Run migrations
 bun run db:studio          # Open Drizzle Studio GUI
-
-# SvelteKit sync (generates types)
-bun run prepare
+bun run prepare            # Sync SvelteKit types
 ```
 
-### Environment Variables
+**Note:** No test framework configured. Use `bun run check` for type validation.
 
-Required: `DATABASE_URL` - SQLite database URL (e.g., `file:./local.db`)
+**Environment:** Requires `DATABASE_URL` (e.g., `file:./local.db`)
 
 ## Project Structure
 
+- `src/lib/components/` - Reusable Svelte components (PascalCase.svelte)
+- `src/lib/schemas/` - Valibot validation schemas
+- `src/lib/server/db/` - Drizzle schema and connection
+- `src/lib/*.remote.ts` - SvelteKit remote functions (server actions)
+- `src/routes/` - File-based routing
+- `src/hooks.server.ts` - Auth middleware
+
+## Code Style
+
+### TypeScript & Imports
+
+Strict mode enabled. Use explicit types for parameters/returns, inference for locals.
+
+```typescript
+// Import order: 1) SvelteKit  2) External  3) Internal
+import { error, redirect } from "@sveltejs/kit";
+import { form, getRequestEvent } from "$app/server";
+import { eq } from "drizzle-orm";
+import { db } from "$lib/server/db";
+import * as table from "$lib/server/db/schema";
 ```
-src/
-  lib/
-    assets/           # Static assets (favicon, images)
-    components/       # Reusable Svelte components
-    schemas/          # Valibot validation schemas
-    server/
-      db/             # Drizzle schema and database connection
-      auth.ts         # Authentication utilities
-    *.remote.ts       # SvelteKit remote functions (server actions)
-    index.ts          # Lib barrel exports
-  routes/             # SvelteKit file-based routing
-  app.d.ts            # Global type declarations
-  app.html            # HTML template
-  hooks.server.ts     # Server hooks (auth middleware)
-```
 
-## Code Style Guidelines
-
-### TypeScript
-
-- Strict mode enabled with all strict checks
-- Use explicit types for function parameters and return values
-- Prefer type inference for local variables when types are obvious
-- Export types from schema.ts using `$inferSelect` pattern:
-  ```typescript
-  export type User = typeof user.$inferSelect;
-  ```
-
-### Imports
-
-- Use `$lib` alias for all lib imports: `import { db } from "$lib/server/db"`
-- Use `$app/server` for SvelteKit server utilities
-- Use `$app/navigation` for client-side navigation utilities
-- Import order:
-  1. SvelteKit/framework imports (`@sveltejs/kit`, `$app/*`)
-  2. External packages (`drizzle-orm`, `valibot`)
-  3. Internal modules (`$lib/*`)
-- Use namespace imports for schema tables: `import * as table from "$lib/server/db/schema"`
-
-### Svelte 5 Conventions
-
-- Use `$props()` for component props, not the old `export let` syntax
-- Use `$state()` for reactive state
-- Use `$derived()` for computed values
-- Use `{@render children()}` for slot content, not `<slot>`
-- Use `$effect()` for side effects (sparingly)
+### Svelte 5 Runes (Required)
 
 ```svelte
 <script lang="ts">
-  interface Props {
-    name: string;
-    count?: number;
-  }
-  let { name, count = 0 }: Props = $props();
+  interface Props { name: string; count?: number; }
+  let { name, count = 0 }: Props = $props();  // NOT export let
   let doubled = $derived(count * 2);
+  let items = $state<string[]>([]);
 </script>
 ```
 
-### Remote Functions (Server Actions)
+- `$props()` for props, `$state()` for state, `$derived()` for computed
+- `{@render children()}` for slots (NOT `<slot>`)
+- `$effect()` for side effects (use sparingly)
 
-Use SvelteKit experimental remote functions for forms:
+### Remote Functions (*.remote.ts)
 
 ```typescript
-// src/lib/example.remote.ts
-import { form } from "$app/server";
-import { getRequestEvent } from "$app/server";
+import { form, getRequestEvent } from "$app/server";
+import { redirect, invalid } from "@sveltejs/kit";
 
-export const myAction = form(MyValibotSchema, async (data) => {
+export const myAction = form(MyValibotSchema, async (data, issue) => {
   const { locals, cookies } = getRequestEvent();
-  // ... handle action
+  if (!locals.user) invalid(issue.username("Not authenticated"));
   redirect(302, "/success");
 });
 ```
 
-Usage in Svelte:
+Usage:
 ```svelte
-<script>
-  import { myAction } from '$lib/example.remote';
-</script>
-
 <form {...myAction}>
-  <input {...myAction.fields.fieldName.as('text')} />
+  <input {...myAction.fields.fieldName.as('text')} class="input" />
   {#each myAction.fields.fieldName.issues() ?? [] as issue}
     <p class="text-error">{issue.message}</p>
   {/each}
 </form>
 ```
 
-### Validation Schemas
-
-Use Valibot for all validation. Define schemas in `src/lib/schemas/`:
+### Validation (Valibot)
 
 ```typescript
 import * as v from "valibot";
-
 export const MySchema = v.object({
-  field: v.pipe(
-    v.string(),
-    v.minLength(1, "Field is required"),
-    v.maxLength(100, "Too long")
-  ),
+  field: v.pipe(v.string(), v.minLength(1, "Required"), v.maxLength(100)),
 });
-
 export type MyData = v.InferOutput<typeof MySchema>;
 ```
 
 ### Database (Drizzle ORM)
 
-- Schema defined in `src/lib/server/db/schema.ts`
-- Use `text("id").$defaultFn(() => Bun.randomUUIDv7())` for UUID primary keys
-- Use `integer("timestamp", { mode: "timestamp" })` for date fields
-- Always use parameterized queries via Drizzle's query builder
+```typescript
+// Schema: src/lib/server/db/schema.ts
+export const myTable = sqliteTable("my_table", {
+  id: text("id").primaryKey().$defaultFn(() => Bun.randomUUIDv7()),
+  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+});
+export type MyTable = typeof myTable.$inferSelect;
+
+// Queries
+const [result] = await db.select().from(table.user).where(eq(table.user.id, id));
+```
 
 ### Error Handling
 
-- Use SvelteKit's `error()` helper for HTTP errors:
-  ```typescript
-  import { error } from "@sveltejs/kit";
-  error(401, "Not authenticated");
-  ```
-- Use `redirect()` for navigation after mutations
-- Check `locals.user` for authentication in server code
+```typescript
+import { error, redirect } from "@sveltejs/kit";
+error(401, "Not authenticated");  // HTTP errors
+redirect(302, "/auth");           // Navigation after mutations
+```
 
 ### Naming Conventions
 
-- Files: kebab-case for routes, camelCase for lib modules
-- Remote functions: `*.remote.ts` suffix
-- Components: PascalCase (`Navbar.svelte`)
-- Variables/functions: camelCase
-- Database tables: snake_case
-- Types: PascalCase with descriptive suffixes (`AuthFormData`, `SessionValidationResult`)
+| Element | Convention | Example |
+|---------|------------|---------|
+| Route files | kebab-case | `auth/+page.svelte` |
+| Lib files | camelCase | `auth.remote.ts` |
+| Components | PascalCase | `Navbar.svelte` |
+| Variables | camelCase | `formatDuration` |
+| DB tables | snake_case | `time_log` |
+| Types | PascalCase | `AuthFormData` |
 
 ### Styling
 
-- TailwindCSS 4 with DaisyUI 5 components
-- Custom "lazylofi" theme defined in `src/routes/layout.css`
-- Use DaisyUI component classes: `btn`, `card`, `input`, `alert`, etc.
-- Custom utilities: `shadow-soft`, `shadow-soft-lg`, `glow-accent`, `animate-float`
-- Font families: `font-display` (Fredoka) for headings, default (Outfit) for body
-
-### Component Organization
-
-- If a UI component is only used in one place, keep it as inline Svelte template markup within that component
-- If it gets reused, extract it into a separate reusable component in `src/lib/components/`
-- Use Svelte transitions from `svelte/transition` (`fly`, `fade`)
-
-### Authentication Pattern
-
-Authentication is handled via:
-1. `hooks.server.ts` - validates session on every request
-2. `locals.user` and `locals.session` - available in all server code
-3. Cookie-based sessions with SHA-256 hashed tokens
-4. Password hashing with Argon2id via Bun
-
-### Page Load Data
-
-Use typed `PageServerLoad` functions:
-
-```typescript
-import type { PageServerLoad } from "./$types";
-
-export const load: PageServerLoad = async ({ locals, url }) => {
-  if (!locals.user) {
-    return { user: null };
-  }
-  // Fetch data...
-  return { user: locals.user, data };
-};
-```
+- TailwindCSS 4 + DaisyUI 5, custom "lazylofi" theme in `src/routes/layout.css`
+- DaisyUI: `btn`, `card`, `input`, `alert`, `fieldset`
+- Custom: `shadow-soft`, `glow-accent`, `animate-float`
+- Fonts: `font-display` (Fredoka) headings, Outfit body
 
 ## Common Patterns
 
 ### Protected Routes
 ```typescript
-if (!locals.user) {
-  redirect(302, "/auth");
-}
+export const load: PageServerLoad = async ({ locals }) => {
+  if (!locals.user) redirect(302, "/auth");
+  return { user: locals.user };
+};
 ```
 
-### Database Queries
-```typescript
-const [result] = await db
-  .select()
-  .from(table.user)
-  .where(eq(table.user.id, userId));
-```
-
-### Form Validation Display
+### Form with Validation
 ```svelte
 <fieldset class="fieldset">
-  <legend class="fieldset-legend">Field Label</legend>
-  <input
-    {...formAction.fields.fieldName.as('text')}
-    class="input w-full"
-    class:input-error={(formAction.fields.fieldName.issues()?.length ?? 0) > 0}
-  />
-  {#each formAction.fields.fieldName.issues() ?? [] as issue}
+  <legend class="fieldset-legend">Label</legend>
+  <input {...formAction.fields.field.as('text')} class="input w-full"
+    class:input-error={(formAction.fields.field.issues()?.length ?? 0) > 0} />
+  {#each formAction.fields.field.issues() ?? [] as issue}
     <p class="fieldset-label text-error">{issue.message}</p>
   {/each}
 </fieldset>
+```
+
+### Authentication
+
+- `hooks.server.ts` validates session on every request
+- `locals.user` / `locals.session` available in server code
+- Cookie sessions with SHA-256 tokens, Argon2id password hashing via Bun
+
+### Async Components
+
+Enabled via `svelte.config.js` (`experimental.async: true`):
+```svelte
+<script lang="ts">
+  let data = $derived(await fetchData());
+</script>
 ```
