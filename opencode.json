@@ -4,6 +4,10 @@
     "svelte": {
       "type": "local",
       "command": ["bunx", "-y", "@sveltejs/mcp"]
+    },
+    "daisyUI": {
+      "type": "remote",
+      "url": "https://gitmcp.io/saadeghi/daisyui"
     }
   }
 }
