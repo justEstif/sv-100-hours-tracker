@@ -3,10 +3,13 @@
   import { cubicOut } from "svelte/easing";
   import { page } from "$app/state";
   import Navbar from "$lib/components/Navbar.svelte";
+  import ConfirmDeleteModal from "$lib/components/ConfirmDeleteModal.svelte";
   import {
     createTimeLog,
     createMilestone,
     getCommitmentWithLogs,
+    deleteTimeLog,
+    deleteCommitment,
   } from "$lib/log.remote";
 
   let { data } = $props();
@@ -21,6 +24,39 @@
   // UI state for milestone form visibility
   let showMilestoneForm = $state(false);
   let milestoneDismissed = $state(false);
+
+  // Delete modal state
+  let deleteModalOpen = $state(false);
+  let deleteTarget = $state<
+    | { type: "commitment"; id: string }
+    | { type: "log"; id: string; commitmentId: string }
+    | null
+  >(null);
+
+  function openDeleteModal(
+    target:
+      | { type: "commitment"; id: string }
+      | { type: "log"; id: string; commitmentId: string },
+  ) {
+    deleteTarget = target;
+    deleteModalOpen = true;
+  }
+
+  function closeDeleteModal() {
+    deleteModalOpen = false;
+    deleteTarget = null;
+  }
+
+  // Get delete modal message
+  let deleteModalTitle = $derived(
+    deleteTarget?.type === "commitment" ? "Delete Commitment" : "Delete Log",
+  );
+
+  let deleteModalMessage = $derived(
+    deleteTarget?.type === "commitment"
+      ? `This will permanently delete this commitment and all ${commitmentData?.logs.length ?? 0} time logs and ${commitmentData?.milestones.length ?? 0} milestones.`
+      : "This will permanently delete this time log entry.",
+  );
 
   // Format minutes to hours:minutes display
   function formatDuration(minutes: number): string {
@@ -91,9 +127,60 @@
 
         <!-- Commitment header -->
         <div class="mb-8">
-          <h1 class="text-3xl font-display font-bold">
-            {commitmentData.commitment.title}
-          </h1>
+          <div class="flex items-start justify-between gap-4">
+            <h1 class="text-3xl font-display font-bold">
+              {commitmentData.commitment.title}
+            </h1>
+            <div class="flex gap-2">
+              <!-- Edit commitment -->
+              <a
+                href="/{commitmentData.commitment.id}/edit"
+                class="btn btn-ghost btn-sm btn-square"
+                title="Edit commitment"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-4 w-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                  />
+                </svg>
+              </a>
+              <!-- Delete commitment -->
+              <button
+                type="button"
+                class="btn btn-ghost btn-sm btn-square text-error"
+                title="Delete commitment"
+                onclick={() =>
+                  openDeleteModal({
+                    type: "commitment",
+                    id: commitmentData.commitment.id,
+                  })}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-4 w-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                  />
+                </svg>
+              </button>
+            </div>
+          </div>
           <p class="mt-2 text-neutral">
             {#if commitmentData.commitment.category}
               {commitmentData.commitment.category} &bull;
@@ -378,6 +465,27 @@
                       <span class="text-neutral text-sm ml-auto">
                         {formatDate(milestone.completedAt)}
                       </span>
+                      <!-- Edit milestone -->
+                      <a
+                        href="/{commitmentData.commitment.id}/milestone/{milestone.id}/edit"
+                        class="btn btn-ghost btn-sm btn-square"
+                        title="Edit milestone"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          class="h-4 w-4"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                          />
+                        </svg>
+                      </a>
                     </div>
                     <p class="text-neutral whitespace-pre-wrap">
                       {milestone.userSynthesis}
@@ -428,6 +536,56 @@
                           >
                         </p>
                       </div>
+                      <div class="flex gap-1">
+                        <!-- Edit log -->
+                        <a
+                          href="/{commitmentData.commitment.id}/log/{log.id}/edit"
+                          class="btn btn-ghost btn-sm btn-square"
+                          title="Edit log"
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            class="h-4 w-4"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                            />
+                          </svg>
+                        </a>
+                        <!-- Delete log -->
+                        <button
+                          type="button"
+                          class="btn btn-ghost btn-sm btn-square text-error"
+                          title="Delete log"
+                          onclick={() =>
+                            openDeleteModal({
+                              type: "log",
+                              id: log.id,
+                              commitmentId: commitmentData.commitment.id,
+                            })}
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            class="h-4 w-4"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                            />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
                     <p class="text-neutral mt-2">{log.reflection}</p>
                   </div>
@@ -440,3 +598,45 @@
     {/if}
   </main>
 </div>
+
+<!-- Delete Confirmation Modal -->
+<ConfirmDeleteModal
+  bind:open={deleteModalOpen}
+  title={deleteModalTitle}
+  message={deleteModalMessage}
+  onClose={closeDeleteModal}
+>
+  {#if deleteTarget?.type === "commitment"}
+    <form {...deleteCommitment}>
+      <input type="hidden" name="id" value={deleteTarget.id} />
+      <button
+        type="submit"
+        class="btn btn-error"
+        disabled={!!deleteCommitment.pending}
+      >
+        {#if deleteCommitment.pending}
+          <span class="loading loading-spinner loading-sm"></span>
+          Deleting...
+        {:else}
+          Delete Commitment
+        {/if}
+      </button>
+    </form>
+  {:else if deleteTarget?.type === "log"}
+    <form {...deleteTimeLog}>
+      <input type="hidden" name="id" value={deleteTarget.id} />
+      <button
+        type="submit"
+        class="btn btn-error"
+        disabled={!!deleteTimeLog.pending}
+      >
+        {#if deleteTimeLog.pending}
+          <span class="loading loading-spinner loading-sm"></span>
+          Deleting...
+        {:else}
+          Delete Log
+        {/if}
+      </button>
+    </form>
+  {/if}
+</ConfirmDeleteModal>
