@@ -1,9 +1,13 @@
 <script lang="ts">
-  import { fly, fade } from "svelte/transition";
+  import { fly, fade, slide } from "svelte/transition";
   import { cubicOut } from "svelte/easing";
   import { page } from "$app/state";
   import Navbar from "$lib/components/Navbar.svelte";
-  import { createTimeLog, getCommitmentWithLogs } from "$lib/log.remote";
+  import {
+    createTimeLog,
+    createMilestone,
+    getCommitmentWithLogs,
+  } from "$lib/log.remote";
 
   let { data } = $props();
 
@@ -13,6 +17,10 @@
       ? await getCommitmentWithLogs(page.params.commitmentId)
       : null,
   );
+
+  // UI state for milestone form visibility
+  let showMilestoneForm = $state(false);
+  let milestoneDismissed = $state(false);
 
   // Format minutes to hours:minutes display
   function formatDuration(minutes: number): string {
@@ -37,6 +45,22 @@
   function getTodayString(): string {
     const today = new Date();
     return today.toISOString().split("T")[0];
+  }
+
+  // Get milestone label based on threshold
+  function getMilestoneLabel(threshold: number): string {
+    switch (threshold) {
+      case 25:
+        return "Quarter Way";
+      case 50:
+        return "Halfway There";
+      case 75:
+        return "Three Quarters";
+      case 100:
+        return "Journey Complete";
+      default:
+        return `${threshold} Hours`;
+    }
   }
 </script>
 
@@ -92,6 +116,131 @@
           ></progress>
         </div>
 
+        <!-- Milestone Banner (when pending) -->
+        {#if commitmentData.pendingMilestone && !milestoneDismissed}
+          <div
+            class="alert alert-info mb-8 shadow-soft"
+            in:fly={{ y: -20, duration: 400, easing: cubicOut }}
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-6 w-6 shrink-0"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <div>
+              <h3 class="font-display font-bold">
+                {getMilestoneLabel(commitmentData.pendingMilestone)}!
+              </h3>
+              <p class="text-sm">
+                You've reached {commitmentData.pendingMilestone} hours. Take a
+                moment to reflect on your journey so far.
+              </p>
+            </div>
+            <div class="flex gap-2">
+              <button
+                class="btn btn-sm btn-primary"
+                onclick={() => (showMilestoneForm = true)}
+              >
+                Write Synthesis
+              </button>
+              <button
+                class="btn btn-sm btn-ghost"
+                onclick={() => (milestoneDismissed = true)}
+              >
+                Later
+              </button>
+            </div>
+          </div>
+        {/if}
+
+        <!-- Milestone Form (expandable) -->
+        {#if showMilestoneForm && commitmentData.pendingMilestone}
+          <div
+            class="card bg-base-100 mb-8 border-2 border-info"
+            transition:slide={{ duration: 300, easing: cubicOut }}
+          >
+            <div class="card-body">
+              <h2 class="text-xl font-display font-semibold mb-2">
+                {getMilestoneLabel(commitmentData.pendingMilestone)} Synthesis
+              </h2>
+              <p class="text-neutral text-sm mb-4">
+                Reflect on what you've learned, challenges you've overcome, and
+                insights you've gained in your first {commitmentData.pendingMilestone}
+                hours.
+              </p>
+
+              <form {...createMilestone} class="space-y-4">
+                <!-- Hidden fields -->
+                <input
+                  type="hidden"
+                  name="commitmentId"
+                  value={commitmentData.commitment.id}
+                />
+                <input
+                  type="hidden"
+                  name="hoursThreshold"
+                  value={commitmentData.pendingMilestone}
+                />
+
+                <!-- Synthesis textarea -->
+                <fieldset class="fieldset">
+                  <legend class="fieldset-legend">Your Synthesis</legend>
+                  <textarea
+                    {...createMilestone.fields.userSynthesis.as("text")}
+                    class="textarea w-full"
+                    class:textarea-error={(createMilestone.fields.userSynthesis.issues()
+                      ?.length ?? 0) > 0}
+                    rows="6"
+                    placeholder="What have you learned? What surprised you? What do you want to focus on next?"
+                  ></textarea>
+                  {#each createMilestone.fields.userSynthesis.issues() ?? [] as issue}
+                    <p class="fieldset-label text-error">{issue.message}</p>
+                  {/each}
+                </fieldset>
+
+                <!-- Buttons -->
+                <div class="flex gap-2">
+                  <button
+                    type="submit"
+                    disabled={!!createMilestone.pending}
+                    class="btn btn-primary"
+                  >
+                    {#if createMilestone.pending}
+                      <span class="loading loading-spinner loading-sm"></span>
+                      Saving...
+                    {:else}
+                      Save Synthesis
+                    {/if}
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn-ghost"
+                    onclick={() => (showMilestoneForm = false)}
+                  >
+                    Cancel
+                  </button>
+                </div>
+
+                <!-- Form-level errors -->
+                {#each createMilestone.fields.allIssues() as issue}
+                  <div class="alert alert-error mt-4">
+                    <span>{issue.message}</span>
+                  </div>
+                {/each}
+              </form>
+            </div>
+          </div>
+        {/if}
+
         <!-- Log form -->
         <div
           class="card bg-base-100 mb-8"
@@ -106,7 +255,7 @@
               <!-- Hidden commitment ID -->
               <input
                 type="hidden"
-                {...createTimeLog.fields.commitmentId.as("text")}
+                name="commitmentId"
                 value={commitmentData.commitment.id}
               />
 
@@ -198,6 +347,47 @@
             </form>
           </div>
         </div>
+
+        <!-- Completed Milestones -->
+        {#if commitmentData.milestones.length > 0}
+          <div class="mb-8">
+            <h2 class="text-xl font-display font-semibold mb-4">
+              Milestones
+            </h2>
+            <div class="space-y-4">
+              {#each commitmentData.milestones as milestone, i (milestone.id)}
+                <div
+                  class="card bg-base-100 border-l-4 border-secondary"
+                  in:fly={{
+                    y: 20,
+                    duration: 400,
+                    delay: i * 80,
+                    easing: cubicOut,
+                  }}
+                >
+                  <div class="card-body py-4">
+                    <div class="flex items-center gap-3 mb-2">
+                      <div
+                        class="badge badge-secondary badge-lg font-display font-bold"
+                      >
+                        {milestone.hoursThreshold}h
+                      </div>
+                      <h3 class="font-display font-semibold">
+                        {getMilestoneLabel(milestone.hoursThreshold)}
+                      </h3>
+                      <span class="text-neutral text-sm ml-auto">
+                        {formatDate(milestone.completedAt)}
+                      </span>
+                    </div>
+                    <p class="text-neutral whitespace-pre-wrap">
+                      {milestone.userSynthesis}
+                    </p>
+                  </div>
+                </div>
+              {/each}
+            </div>
+          </div>
+        {/if}
 
         <!-- Logs list -->
         <div>

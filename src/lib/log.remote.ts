@@ -1,8 +1,13 @@
 import { form, getRequestEvent, query } from "$app/server";
-import { CommitmentFormSchema, TimeLogFormSchema } from "$lib/schemas/log";
+import {
+  CommitmentFormSchema,
+  MilestoneFormSchema,
+  MILESTONE_THRESHOLDS,
+  TimeLogFormSchema,
+} from "$lib/schemas/log";
 import { db } from "$lib/server/db";
 import * as table from "$lib/server/db/schema";
-import { error, invalid, redirect } from "@sveltejs/kit";
+import { invalid, redirect } from "@sveltejs/kit";
 import { and, desc, eq, sql } from "drizzle-orm";
 import * as v from "valibot";
 
@@ -76,6 +81,60 @@ export const createCommitment = form(
   },
 );
 
+/**
+ * Create a milestone synthesis
+ * Validates commitment ownership and that milestone hasn't been created yet
+ */
+export const createMilestone = form(
+  MilestoneFormSchema,
+  async ({ commitmentId, hoursThreshold, userSynthesis }) => {
+    const { locals } = getRequestEvent();
+
+    if (!locals.user) {
+      invalid("You must be signed in to create a milestone");
+    }
+
+    // Verify commitment belongs to user
+    const [commitment] = await db
+      .select()
+      .from(table.commitment)
+      .where(
+        and(
+          eq(table.commitment.id, commitmentId),
+          eq(table.commitment.userId, locals.user.id),
+        ),
+      );
+
+    if (!commitment) {
+      invalid("Commitment not found");
+    }
+
+    // Check if milestone already exists for this threshold
+    const [existingMilestone] = await db
+      .select()
+      .from(table.milestone)
+      .where(
+        and(
+          eq(table.milestone.commitmentId, commitmentId),
+          eq(table.milestone.hoursThreshold, hoursThreshold),
+        ),
+      );
+
+    if (existingMilestone) {
+      invalid("Milestone already exists for this threshold");
+    }
+
+    // Insert the milestone
+    await db.insert(table.milestone).values({
+      commitmentId,
+      hoursThreshold,
+      userSynthesis,
+    });
+
+    redirect(302, `/${commitmentId}`);
+  },
+);
+
 // ============================================================================
 // Query Functions
 // ============================================================================
@@ -114,7 +173,7 @@ export const getCommitments = query(async () => {
 });
 
 /**
- * Get a single commitment with its logs
+ * Get a single commitment with its logs, milestones, and pending milestone info
  * Redirects to home if commitment not found or doesn't belong to user
  */
 export const getCommitmentWithLogs = query(v.string(), async (commitmentId) => {
@@ -147,7 +206,28 @@ export const getCommitmentWithLogs = query(v.string(), async (commitmentId) => {
 
   const totalMinutes = logs.reduce((sum, log) => sum + log.durationMinutes, 0);
 
-  return { commitment, logs, totalMinutes };
+  // Fetch completed milestones
+  const milestones = await db
+    .select()
+    .from(table.milestone)
+    .where(eq(table.milestone.commitmentId, commitmentId))
+    .orderBy(table.milestone.hoursThreshold);
+
+  // Calculate pending milestone threshold (if any)
+  const completedThresholds = milestones.map((m) => m.hoursThreshold);
+  const totalHours = totalMinutes / 60;
+  const pendingMilestone = MILESTONE_THRESHOLDS.find(
+    (threshold) =>
+      totalHours >= threshold && !completedThresholds.includes(threshold),
+  );
+
+  return {
+    commitment,
+    logs,
+    totalMinutes,
+    milestones,
+    pendingMilestone: pendingMilestone ?? null,
+  };
 });
 
 /**

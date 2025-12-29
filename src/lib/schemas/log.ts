@@ -53,3 +53,29 @@ export const CommitmentFormSchema = v.object({
 });
 
 export type CommitmentFormData = v.InferOutput<typeof CommitmentFormSchema>;
+
+// ============================================================================
+// Milestone Schema
+// ============================================================================
+
+export const MILESTONE_THRESHOLDS = [25, 50, 75, 100] as const;
+export type MilestoneThreshold = (typeof MILESTONE_THRESHOLDS)[number];
+
+export const MilestoneFormSchema = v.object({
+  commitmentId: v.pipe(v.string(), v.minLength(1, "Commitment is required")),
+  hoursThreshold: v.pipe(
+    v.number(),
+    v.check(
+      (n): n is MilestoneThreshold =>
+        MILESTONE_THRESHOLDS.includes(n as MilestoneThreshold),
+      "Invalid milestone threshold"
+    )
+  ),
+  userSynthesis: v.pipe(
+    v.string(),
+    v.minLength(10, "Please write at least a few sentences about your journey"),
+    v.maxLength(5000, "Synthesis is too long")
+  ),
+});
+
+export type MilestoneFormData = v.InferOutput<typeof MilestoneFormSchema>;
