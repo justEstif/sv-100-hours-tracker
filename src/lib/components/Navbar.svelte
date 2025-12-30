@@ -17,7 +17,7 @@
   }}
 />
 
-<nav class="max-w-4xl mx-auto navbar bg-base-100 shadow-soft sticky top-0 z-50">
+<nav class="max-w-4xl mx-auto navbar bg-base-100 shadow-soft sticky top-0 z-50 rounded-md">
   <div class="navbar-start">
     <a href="/" class="text-xl font-display font-bold text-primary">100 Hours</a
     >
