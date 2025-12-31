@@ -1,3 +1,3 @@
 [env]
-DATABASE_URL = "file:local.db"
+DATABASE_URL = "postgres://postgres:postgres@localhost:5432/100-hours-tracker"
 GOOGLE_GENERATIVE_AI_API_KEY = ""

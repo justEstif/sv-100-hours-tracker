@@ -1,6 +1,6 @@
 # Agent Guidelines
 
-SvelteKit 5 app using Bun runtime, Drizzle ORM with SQLite, TailwindCSS 4, and DaisyUI 5. Time tracking for 100-hour learning commitments with a "Lazy Lofi" aesthetic.
+SvelteKit 5 app using Bun runtime, Drizzle ORM with PostgreSQL, TailwindCSS 4, and DaisyUI 5. Time tracking for 100-hour learning commitments with a "Lazy Lofi" aesthetic.
 
 ## Commands
 
@@ -18,7 +18,41 @@ bun run prepare            # Sync SvelteKit types
 
 **Note:** No test framework configured. Use `bun run check` for type validation.
 
-**Environment:** Requires `DATABASE_URL` (e.g., `file:./local.db`)
+## Local Development Setup
+
+```bash
+# Start local Postgres
+docker compose up -d
+
+# Install dependencies
+bun install
+
+# Push schema to database (or generate + migrate)
+bun run db:push
+
+# Start dev server
+bun run dev
+```
+
+**Environment:** Requires `DATABASE_URL` (e.g., `postgres://postgres:postgres@localhost:5432/hours_tracker`)
+
+Set via `mise.toml` for local development.
+
+## Dokku Deployment
+
+```bash
+# Initial setup (one-time on Dokku server)
+dokku apps:create 100-hours-tracker
+dokku postgres:create 100-hours-tracker-db
+dokku postgres:link 100-hours-tracker-db 100-hours-tracker
+dokku config:set 100-hours-tracker GOOGLE_GENERATIVE_AI_API_KEY="your-key-here"
+
+# Deploy (from local machine)
+git remote add dokku dokku@your-server:100-hours-tracker
+git push dokku main
+
+# Migrations run automatically via predeploy hook (app.json)
+```
 
 ## Project Structure
 
@@ -96,9 +130,9 @@ export type MyData = v.InferOutput<typeof MySchema>;
 
 ```typescript
 // Schema: src/lib/server/db/schema.ts
-export const myTable = sqliteTable("my_table", {
+export const myTable = pgTable("my_table", {
   id: text("id").primaryKey().$defaultFn(() => Bun.randomUUIDv7()),
-  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+  createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
 });
 export type MyTable = typeof myTable.$inferSelect;
 

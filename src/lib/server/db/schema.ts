@@ -1,10 +1,10 @@
-import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { pgTable, text, integer, timestamp, boolean } from "drizzle-orm/pg-core";
 
 // ============================================================================
 // Auth Tables
 // ============================================================================
 
-export const user = sqliteTable("user", {
+export const user = pgTable("user", {
   id: text("id")
     .primaryKey()
     .$defaultFn(() => Bun.randomUUIDv7()),
@@ -12,19 +12,19 @@ export const user = sqliteTable("user", {
   passwordHash: text("password_hash").notNull(),
 });
 
-export const session = sqliteTable("session", {
+export const session = pgTable("session", {
   id: text("id").primaryKey(), // Derived from hashed token, not auto-generated
   userId: text("user_id")
     .notNull()
     .references(() => user.id),
-  expiresAt: integer("expires_at", { mode: "timestamp" }).notNull(),
+  expiresAt: timestamp("expires_at", { mode: "date" }).notNull(),
 });
 
 // ============================================================================
 // Core Tables
 // ============================================================================
 
-export const commitment = sqliteTable("commitment", {
+export const commitment = pgTable("commitment", {
   id: text("id")
     .primaryKey()
     .$defaultFn(() => Bun.randomUUIDv7()),
@@ -34,16 +34,16 @@ export const commitment = sqliteTable("commitment", {
   title: text("title").notNull(),
   category: text("category"),
   goalHours: integer("goal_hours").notNull().default(100),
-  isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
-  createdAt: integer("created_at", { mode: "timestamp" })
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at", { mode: "date" })
     .notNull()
-    .$defaultFn(() => new Date()),
-  updatedAt: integer("updated_at", { mode: "timestamp" })
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: "date" })
     .notNull()
-    .$defaultFn(() => new Date()),
+    .defaultNow(),
 });
 
-export const timeLog = sqliteTable("time_log", {
+export const timeLog = pgTable("time_log", {
   id: text("id")
     .primaryKey()
     .$defaultFn(() => Bun.randomUUIDv7()),
@@ -51,14 +51,14 @@ export const timeLog = sqliteTable("time_log", {
     .notNull()
     .references(() => commitment.id, { onDelete: "cascade" }),
   durationMinutes: integer("duration_minutes").notNull(),
-  date: integer("date", { mode: "timestamp" }).notNull(),
+  date: timestamp("date", { mode: "date" }).notNull(),
   reflection: text("reflection").notNull(),
-  createdAt: integer("created_at", { mode: "timestamp" })
+  createdAt: timestamp("created_at", { mode: "date" })
     .notNull()
-    .$defaultFn(() => new Date()),
+    .defaultNow(),
 });
 
-export const milestone = sqliteTable("milestone", {
+export const milestone = pgTable("milestone", {
   id: text("id")
     .primaryKey()
     .$defaultFn(() => Bun.randomUUIDv7()),
@@ -68,9 +68,9 @@ export const milestone = sqliteTable("milestone", {
   hoursThreshold: integer("hours_threshold").notNull(),
   userSynthesis: text("user_synthesis").notNull(),
   aiFeedback: text("ai_feedback"),
-  completedAt: integer("completed_at", { mode: "timestamp" })
+  completedAt: timestamp("completed_at", { mode: "date" })
     .notNull()
-    .$defaultFn(() => new Date()),
+    .defaultNow(),
 });
 
 // ============================================================================

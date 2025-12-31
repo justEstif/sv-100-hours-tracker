@@ -12,7 +12,6 @@ RUN bun install --frozen-lockfile
 COPY . .
 
 # Build the SvelteKit app
-ARG DATABASE_URL
 RUN bun run build
 
 # Production stage
