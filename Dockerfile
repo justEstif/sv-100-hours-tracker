@@ -21,6 +21,11 @@ WORKDIR /app
 # Copy built output from build stage
 COPY --from=build /app/build ./build
 COPY --from=build /app/package.json ./
+COPY --from=build /app/bun.lock ./
+
+# Copy drizzle migration files and config
+COPY --from=build /app/drizzle ./drizzle
+COPY --from=build /app/drizzle.config.ts ./
 
 # Install production dependencies only
 RUN bun install --production --frozen-lockfile
