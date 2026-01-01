@@ -2,6 +2,8 @@
 
 Track long-term skill commitments with reflections and milestone synthesis.
 
+Link: https://sv-100-hours-tracker.estifanos.cc/
+
 ## Problem
 
 It's easy to sample many interests shallowly but hard to develop genuine depth. Most productivity tools optimize for task completion or streaks, not sustained engagement over months.
